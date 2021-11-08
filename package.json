@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/Alex-Reyne/tinyapp/issues"
   },
-  "homepage": "https://github.com/Alex-Reyne/tinyapp#readme"
+  "homepage": "https://github.com/Alex-Reyne/tinyapp#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
 }
