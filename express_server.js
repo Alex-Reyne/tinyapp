@@ -62,8 +62,8 @@ app.get('/u/:shortURL', (req, res) => {
   res.redirect(`http://${longURL}`);
 });
 
+// post request to delete a shortURL from users list. Redirects back to URLs page essentially refreshing.
 app.post("/urls/:shortURL/delete", (req, res) => {
-  // console.log(req.body);  // Log the POST request body to the console
   const urlToDelete = req.params.shortURL;
   console.log('url to delete', urlToDelete)
   delete urlDatabase[urlToDelete];
