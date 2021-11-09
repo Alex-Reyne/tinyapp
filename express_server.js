@@ -32,18 +32,25 @@ app.get('/Hello', (req, res) => {
 
 // Shows user URL database.
 app.get('/urls', (req, res) => {
-  const templateVars = { urls: urlDatabase };
+  const templateVars = {
+    username: req.cookies["username"],
+    urls: urlDatabase
+  };
   res.render('urls_index', templateVars);
 });
 
 // Form to enter URL to be shortened.
 app.get('/urls/new', (req, res) => {
-  res.render('urls_new');
+  const templateVars = {
+    username: req.cookies["username"],
+  };
+  res.render('urls_new', templateVars);
 });
 
 // Shows individual page with longURL and shortURL as a link to visit the site.
 app.get('/urls/:shortURL', (req, res) => {
   const templateVars = {
+    username: req.cookies["username"],
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL]
   };
@@ -88,8 +95,9 @@ app.post("/urls/:shortURL", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  
-  res.cookie()
+  const username = req.body.username;
+  res.cookie('username', username);
+  res.redirect('/urls');
 });
 
 // for generating shortURL strings.
