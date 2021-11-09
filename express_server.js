@@ -59,6 +59,11 @@ app.post("/urls", (req, res) => {
 // redirects shortURL to the longURL website.
 app.get('/u/:shortURL', (req, res) => {
   const longURL = urlDatabase[req.params.shortURL];
+
+  if (longURL.includes('http://')) {
+    res.redirect(longURL);
+  }
+  
   res.redirect(`http://${longURL}`);
 });
 
