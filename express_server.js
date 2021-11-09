@@ -3,6 +3,7 @@ const app = express();
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({extended:true}));
 var cookieParser = require('cookie-parser')
+app.use(cookieParser());
 const PORT = 8080; //default port 8080
 
 app.set('view engine', 'ejs');
@@ -76,6 +77,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect(`/urls/`);
 });
 
+// updates the url for the shortURL page you're on.
 app.post("/urls/:shortURL", (req, res) => {
   const shorturlToUpdate = req.params.shortURL;
   const longURL = req.body.longURL;
@@ -83,6 +85,11 @@ app.post("/urls/:shortURL", (req, res) => {
   console.log('req body', req.body);
   urlDatabase[shorturlToUpdate] = longURL;
   res.redirect(`/urls/`);
+});
+
+app.post("/login", (req, res) => {
+  
+  res.cookie()
 });
 
 // for generating shortURL strings.
