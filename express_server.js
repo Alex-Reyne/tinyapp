@@ -100,6 +100,12 @@ app.post("/login", (req, res) => {
   res.redirect('/urls');
 });
 
+app.post("/logout", (req, res) => {
+  const username = req.body.username;
+  res.clearCookie('username', username);
+  res.redirect('/urls');
+});
+
 // for generating shortURL strings.
 function generateRandomString() {
     return Math.floor((1 + Math.random()) * 0x1000000).toString(16).substring(1);

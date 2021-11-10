@@ -8,13 +8,21 @@
       <div class='navbar-nav'>
         <a class="nav-item nav-link" href="/urls">My URLs</a>
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
-        <form class="form-inline" action="/login" method="POST">
-          <div class="form-group mb-2">
-            <h3><%= username %></h3>
-            <input class="form-control" type="text" name="username" placeholder="username" style="width: 200px; margin: 1em">
-            <button type="submit" class="btn btn-primary">login</button>
-          </div>
-        </form>
+        <% if(username){ %>
+          <h3 style="margin-left: 1em;"><%= username %></h3>
+          <form class="form-inline" action="/logout" method="POST">
+            <div class="form-group mb-2">
+              <button type="submit" class="btn btn-primary" style="margin-left: 1em;">logout</button>
+            </div>
+          </form>
+        <% } else{ %>  
+          <form class="form-inline" action="/login" method="POST" style="margin-left: 1em;">
+            <div class="form-group mb-2">
+              <input class="form-control" type="text" name="username" placeholder="username" style="width: 200px; margin-left: 1em">
+              <button type="submit" class="btn btn-primary">login</button>
+            </div>
+          </form>
+          <% } %>
       </div>
     </div>
   </nav>
