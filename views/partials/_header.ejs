@@ -13,14 +13,12 @@
     <div class= "ml-auto">
       <% if(username){ %>
         <form class="form-inline" action="/logout" method="POST">
-            <h3><%= username %></h3>
-            <button type="submit" class="btn btn-outline-danger" style="margin-left: 1em;">logout</button>
+          <h3><%= username %></h3>
+          <button type="submit" class="btn btn-outline-danger" style="margin-left: 1em;">logout</button>
         </form>
         <% } else { %>  
-          <form class="form-inline" action="/login" method="POST" style="margin-left: 0em;">
-              <input class="form-control mr-sm-2" type="text" name="username" placeholder="username" style="width: 200px; margin-left: 1em">
-              <button type="submit" class="btn btn-outline-info">login</button>
-          </form>
+          <a class="nav-item nav-link" href="/login">Login</a>
+          <a class="nav-item nav-link" href="/register">Register</a>
           <% } %>
         </div>
   </nav>

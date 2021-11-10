@@ -13,6 +13,19 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+const users = { 
+  "userRandomID": {
+    id: "userRandomID", 
+    email: "user@example.com", 
+    password: "purple-monkey-dinosaur"
+  },
+ "user2RandomID": {
+    id: "user2RandomID", 
+    email: "user2@example.com", 
+    password: "dishwasher-funk"
+  }
+};
+
 app.get('/', (req, res) => { 
   res.send('Hello!');
 });
@@ -33,7 +46,7 @@ app.get('/Hello', (req, res) => {
 // Shows user URL database.
 app.get('/urls', (req, res) => {
   const templateVars = {
-    username: req.cookies["username"],
+    username: req.cookies["user_id"],
     urls: urlDatabase
   };
   res.render('urls_index', templateVars);
@@ -42,7 +55,7 @@ app.get('/urls', (req, res) => {
 // Form to enter URL to be shortened.
 app.get('/urls/new', (req, res) => {
   const templateVars = {
-    username: req.cookies["username"],
+    username: req.cookies["user_id"],
   };
   res.render('urls_new', templateVars);
 });
@@ -50,7 +63,7 @@ app.get('/urls/new', (req, res) => {
 // Shows individual page with longURL and shortURL as a link to visit the site.
 app.get('/urls/:shortURL', (req, res) => {
   const templateVars = {
-    username: req.cookies["username"],
+    username: req.cookies["user_id"],
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL]
   };
@@ -94,9 +107,38 @@ app.post("/urls/:shortURL", (req, res) => {
   res.redirect(`/urls/`);
 });
 
+app.get("/register", (req, res) => {
+  const templateVars = {
+    username: req.cookies["user_id"],
+  };
+  res.render('user_register', templateVars);
+});
+
+// creates a user when registration form is submitted
+app.post("/register", (req, res) => {
+  console.log(req.body);  // Log the POST request body to the console
+  const email = req.body.email;
+  const password = req.body.password;
+
+  if (!email) {
+    return res.sendStatus(404);
+  }
+
+  if (!userLookup(email)) {
+    return res.sendStatus(404);
+  }
+
+  const shortGen = generateRandomString();
+  users[shortGen] = { id: shortGen, email, password };
+  res.cookie('user_id', shortGen);
+  console.log(users);
+  res.redirect('/urls');
+});
+
 app.post("/login", (req, res) => {
-  const username = req.body.username;
-  res.cookie('username', username);
+  const email = req.body.email;
+  const password = req.body.password;
+  res.cookie('user_email', email);
   res.redirect('/urls');
 });
 
@@ -109,4 +151,14 @@ app.post("/logout", (req, res) => {
 // for generating shortURL strings.
 function generateRandomString() {
     return Math.floor((1 + Math.random()) * 0x1000000).toString(16).substring(1);
+};
+
+const userLookup = function(newEmail) {
+  for (const id in users) {
+    if (users[id].email === newEmail) {
+      return false;
+    }
+  }
+
+  return true;
 };
