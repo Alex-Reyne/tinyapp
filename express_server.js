@@ -51,10 +51,13 @@ app.get('/Hello', (req, res) => {
 
 // Shows user URL database.
 app.get('/urls', (req, res) => {
+  const userid = req.cookies['user_id']
+  const userURLs = urlsForUser(userid)
+
   const templateVars = {
-    user_id: req.cookies['user_id'], 
-    email: getEmailFromId(req.cookies['user_id']),
-    urls: urlDatabase,
+    user_id: userid, 
+    email: getEmailFromId(userid),
+    urls: userURLs,
   };
 
   res.render('urls_index', templateVars);
@@ -219,4 +222,21 @@ const userLookup = function(newEmail) {
 
 const getEmailFromId = user_id => {
   return (users[user_id]) ? users[user_id].email : null;
+};
+
+const urlsForUser = function(id) {
+  const userURLs = {};
+
+  if (!id) {
+    return null;
+  }
+
+  for (const item in urlDatabase) {
+    if (urlDatabase[item].userID === id) {
+      userURLs[item] = urlDatabase[item];
+    }
+  }
+
+  return userURLs;
+  console.log(userURLs);
 };
