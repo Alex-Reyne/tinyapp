@@ -1,10 +1,11 @@
 const PORT = 8080;
-const app = express();
 const morgan = require('morgan');
 const bcrypt = require('bcryptjs');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
+const { userLookup } = require('./helpers.js');
+const app = express();
 
 app.use(cookieSession({
   name: 'session',
@@ -182,7 +183,7 @@ app.post("/register", (req, res) => {
     return res.sendStatus(404);
   }
 
-  const emailExists = userLookup(email);
+  const emailExists = userLookup(email, users);
   if (emailExists) {
     return res.sendStatus(404);
   }
@@ -202,11 +203,11 @@ app.post("/login", (req, res) => {
     return res.sendStatus(404);
   }
   
-  if (!userLookup(email)) {
+  if (!userLookup(email, users)) {
     return res.sendStatus(403)
   }
 
-  const id = userLookup(email);
+  const id = userLookup(email, users);
   
   if (!bcrypt.compareSync(password, users[id].password)) {
     return res.sendStatus(403)
@@ -224,16 +225,6 @@ app.post("/logout", (req, res) => {
 // for generating shortURL strings.
 function generateRandomString() {
     return Math.floor((1 + Math.random()) * 0x1000000).toString(16).substring(1);
-};
-
-const userLookup = function(newEmail) {
-  for (const id in users) {
-    if (users[id].email === newEmail) {
-      return id;
-    }
-  }
-
-  return false;
 };
 
 const getEmailFromId = user_id => {
