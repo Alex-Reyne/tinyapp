@@ -1,10 +1,18 @@
+const PORT = 8080;
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
-app.use(bodyParser.urlencoded({extended:true}));
-const cookieParser = require('cookie-parser')
+const cookieParser = require('cookie-parser');
+const morgan = require('morgan');
+const bcrypt = require('bcryptjs');
+// const cookieSession = require('cookie-session');
 app.use(cookieParser());
-const PORT = 8080;
+app.use(morgan('dev'))
+app.use(bodyParser.urlencoded({extended:true}));
+// app.use(cookieSession({
+//   name: 'session',
+//   keys: ['key1', 'key2']
+// }));
 
 app.set('view engine', 'ejs');
 
@@ -98,7 +106,6 @@ app.get('/urls/:shortURL', (req, res) => {
 
 // generates a short URL and adds it to the database.
 app.post("/urls", (req, res) => {
-  console.log(req.body);  // Log the POST request body to the console
   const shortGen = generateRandomString();
   urlDatabase[shortGen] = { longURL: req.body.longURL, userID: req.cookies['user_id'] };
   res.redirect(`/urls/${shortGen}`);
@@ -125,7 +132,6 @@ app.get('/u/:shortURL', (req, res) => {
 app.post("/urls/:shortURL/delete", (req, res) => {
   const urlToDelete = req.params.shortURL;
   const userid = req.cookies['user_id']
-  console.log('url to delete', urlToDelete);
 
   if (urlDatabase[urlToDelete].userID !== userid) {
     return res.sendStatus(403);
@@ -169,9 +175,9 @@ app.get("/login", (req, res) => {
 
 // creates a user when registration form is submitted
 app.post("/register", (req, res) => {
-  console.log(req.body);  // Log the POST request body to the console
   const email = req.body.email;
   const password = req.body.password;
+  const hashPass = bcrypt.hashSync(password, 10);
 
   if (!email || !password) {
     return res.sendStatus(404);
@@ -184,30 +190,32 @@ app.post("/register", (req, res) => {
 
   
   const shortGen = generateRandomString();
-  users[shortGen] = { id: shortGen, email, password };
+  users[shortGen] = { id: shortGen, email, password: hashPass };
   res.cookie('user_id', shortGen);
-  console.log(users);
+  // req.session.id = users[shortGen].id
   res.redirect('/urls');
 });
 
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-
+  
   if (!email || !password) {
     return res.sendStatus(404);
   }
-
+  
   if (!userLookup(email)) {
     return res.sendStatus(403)
   }
+
   const id = userLookup(email);
   
-  if (users[id].password !== password) {
+  if (!bcrypt.compareSync(password, users[id].password)) {
     return res.sendStatus(403)
   }
 
   res.cookie('user_id', id);
+  // req.session.id = users[id];
   res.redirect('/urls');
 });
 
@@ -249,5 +257,4 @@ const urlsForUser = function(id) {
   }
 
   return userURLs;
-  console.log(userURLs);
 };
