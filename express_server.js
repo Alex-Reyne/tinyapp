@@ -4,44 +4,26 @@ const bcrypt = require('bcryptjs');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
-const { userLookup } = require('./helpers.js');
+const { userLookup, urlsForUser, getEmailFromId, generateRandomString } = require('./helpers.js');
 const app = express();
 
 app.use(cookieSession({
   name: 'session',
   keys: ['key1', 'key2']
 }));
-app.use(morgan('dev'))
+app.use(morgan('dev'));
 app.use(bodyParser.urlencoded({extended:true}));
 
 app.set('view engine', 'ejs');
 
-const urlDatabase = {
-    b6UTxQ: {
-        longURL: "https://www.tsn.ca",
-        userID: "aJ48lW"
-    },
-    i3BoGr: {
-        longURL: "https://www.google.ca",
-        userID: "aJ48lW"
-    }
-};
+// for storing user urls.
+const urlDatabase = {};
 
-const users = { 
-  "userRandomID": {
-    id: "userRandomID", 
-    email: "user@example.com", 
-    password: "purple-monkey-dinosaur"
-  },
- "user2RandomID": {
-    id: "user2RandomID", 
-    email: "user2@example.com", 
-    password: "dishwasher-funk"
-  }
-};
+// user database.
+const users = {};
 
-app.get('/', (req, res) => { 
-  res.send('Hello!');
+app.get('/', (req, res) => {
+  res.redirect('/urls');
 });
 
 app.listen(PORT, () => {
@@ -53,18 +35,14 @@ app.get('/urls.json', (req, res) => {
   res.json(urlDatabase);
 });
 
-app.get('/Hello', (req, res) => {
-  res.send('<html><body>Hello <b>World</b></body></html>\n');
-});
-
-// Shows user URL database.
+// Shows user specific URLs.
 app.get('/urls', (req, res) => {
-  const userid = req.session.id
-  const userURLs = urlsForUser(userid)
+  const userid = req.session.id;
+  const userURLs = urlsForUser(userid, urlDatabase);
 
   const templateVars = {
-    user_id: userid, 
-    email: getEmailFromId(userid),
+    user_id: userid,
+    email: getEmailFromId(userid, users),
     urls: userURLs,
   };
 
@@ -74,29 +52,29 @@ app.get('/urls', (req, res) => {
 // Form to enter URL to be shortened.
 app.get('/urls/new', (req, res) => {
   const templateVars = {
-    user_id: req.session.id, 
-    email: getEmailFromId(req.session.id),
+    user_id: req.session.id,
+    email: getEmailFromId(req.session.id, users),
   };
 
-  if (!req.session.id) {
+  if (!req.session.id) { // if no user is loggen in, redirect to login page.
     res.redirect('/login');
   }
 
   res.render('urls_new', templateVars);
 });
 
-// Shows individual page with longURL and shortURL as a link to visit the site.
+// Shows individual page for shortURL with a form to edit the link.
 app.get('/urls/:shortURL', (req, res) => {
   const url = urlDatabase[req.params.shortURL];
-  const userid = req.session.id
+  const userid = req.session.id;
 
-  if (url === undefined) {
+  if (url === undefined) { // if url doesn't exist in users database, 404.
     return res.sendStatus(404);
   }
 
   const templateVars = {
-    user_id: userid, 
-    email: getEmailFromId(userid),
+    user_id: userid,
+    email: getEmailFromId(userid, users),
     shortURL: req.params.shortURL,
     longURL: url.longURL
   };
@@ -104,9 +82,10 @@ app.get('/urls/:shortURL', (req, res) => {
   res.render('urls_show', templateVars);
 });
 
-// generates a short URL and adds it to the database.
+// generates a short URL and adds it to the users database.
 app.post("/urls", (req, res) => {
   const shortGen = generateRandomString();
+
   urlDatabase[shortGen] = { longURL: req.body.longURL, userID: req.session.id };
   res.redirect(`/urls/${shortGen}`);
 });
@@ -115,12 +94,13 @@ app.post("/urls", (req, res) => {
 app.get('/u/:shortURL', (req, res) => {
   const url = urlDatabase[req.params.shortURL];
   
-  if (url === undefined) {
+  if (url === undefined) { // if shortURL isn't in database, 404.
     return res.sendStatus(404);
   }
 
   let go = url.longURL;
 
+  //check to see if url needs http:// added to it or not.
   if (go.includes('http://') || go.includes('https://')) {
     return res.redirect(go);
   }
@@ -131,9 +111,9 @@ app.get('/u/:shortURL', (req, res) => {
 // post request to delete a shortURL from users list. Redirects back to URLs page essentially refreshing.
 app.post("/urls/:shortURL/delete", (req, res) => {
   const urlToDelete = req.params.shortURL;
-  const userid = req.session.id
+  const userid = req.session.id;
 
-  if (urlDatabase[urlToDelete].userID !== userid) {
+  if (urlDatabase[urlToDelete].userID !== userid) { // prevents deletion of URLs by users that don't own them.
     return res.sendStatus(403);
   }
 
@@ -145,9 +125,9 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 app.post("/urls/:shortURL", (req, res) => {
   const shorturlToUpdate = req.params.shortURL;
   const longURL = req.body.longURL;
-  const userid = req.session.id
+  const userid = req.session.id;
 
-  if (urlDatabase[shorturlToUpdate].userID !== userid) {
+  if (urlDatabase[shorturlToUpdate].userID !== userid) { // prevents changing of URLs by users that don't own them.
     return res.sendStatus(403);
   }
 
@@ -155,19 +135,21 @@ app.post("/urls/:shortURL", (req, res) => {
   res.redirect(`/urls/`);
 });
 
+// render the user register page
 app.get("/register", (req, res) => {
   const templateVars = {
-    user_id: req.session.id, 
-    email: getEmailFromId(req.session.id),
+    user_id: req.session.id,
+    email: getEmailFromId(req.session.id, users),
   };
 
   res.render('user_register', templateVars);
 });
 
+// render the user login page
 app.get("/login", (req, res) => {
   const templateVars = {
-    user_id: req.session.id, 
-    email: getEmailFromId(req.session.id),
+    user_id: req.session.id,
+    email: getEmailFromId(req.session.id, users),
   };
 
   res.render('user_login', templateVars);
@@ -179,70 +161,47 @@ app.post("/register", (req, res) => {
   const password = req.body.password;
   const hashPass = bcrypt.hashSync(password, 10);
 
-  if (!email || !password) {
+  if (!email || !password) { // if either field is empty, 404.
     return res.sendStatus(404);
   }
 
-  const emailExists = userLookup(email, users);
+  const emailExists = userLookup(email, users); // if email exists already, 404.
   if (emailExists) {
     return res.sendStatus(404);
   }
 
   
-  const shortGen = generateRandomString();
-  users[shortGen] = { id: shortGen, email, password: hashPass };
-  req.session.id = shortGen;
+  const shortGen = generateRandomString(); // generates a random sting to assign as users.id.
+  users[shortGen] = { id: shortGen, email, password: hashPass }; // creates user object in database.
+  req.session.id = shortGen; // logs in user and creates encrypted cookie to track them.
   res.redirect('/urls');
 });
 
+// login existing user
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   
-  if (!email || !password) {
+  if (!email || !password) { // if email or password are missing, 404.
     return res.sendStatus(404);
   }
   
-  if (!userLookup(email, users)) {
-    return res.sendStatus(403)
+  if (!userLookup(email, users)) {  // if email doesn't exists, 403.
+    return res.sendStatus(403);
   }
 
-  const id = userLookup(email, users);
+  const id = userLookup(email, users); // get user id
   
-  if (!bcrypt.compareSync(password, users[id].password)) {
-    return res.sendStatus(403)
+  if (!bcrypt.compareSync(password, users[id].password)) { // if email/password don't match, 403.
+    return res.sendStatus(403);
   }
 
-  req.session.id = id;
+  req.session.id = id; // login and create encrypted user cookie
   res.redirect('/urls');
 });
 
+// logout
 app.post("/logout", (req, res) => {
-  req.session.id = null;
+  req.session.id = null; // delete users cookies
   res.redirect('/urls');
 });
-
-// for generating shortURL strings.
-function generateRandomString() {
-    return Math.floor((1 + Math.random()) * 0x1000000).toString(16).substring(1);
-};
-
-const getEmailFromId = user_id => {
-  return (users[user_id]) ? users[user_id].email : null;
-};
-
-const urlsForUser = function(id) {
-  const userURLs = {};
-
-  if (!id) {
-    return null;
-  }
-
-  for (const item in urlDatabase) {
-    if (urlDatabase[item].userID === id) {
-      userURLs[item] = urlDatabase[item];
-    }
-  }
-
-  return userURLs;
-};
