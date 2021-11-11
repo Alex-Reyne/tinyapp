@@ -13,12 +13,14 @@
     <div class= "ml-auto">
       <% if(email){ %>
         <form class="form-inline" action="/logout" method="POST">
-          <h3>Logged in as: <%= email %></h3>
+            <h4 class="nav-item">Logged in as: <%= email %></h4>
           <button type="submit" class="btn btn-outline-danger" style="margin-left: 1em;">logout</button>
         </form>
         <% } else { %>
+          <div class="navbar-nav">
           <a class="nav-item nav-link" href="/login">Login</a>
           <a class="nav-item nav-link" href="/register">Register</a>
+        </div>
           <% } %>
         </div>
   </nav>

@@ -80,14 +80,15 @@ app.get('/urls/new', (req, res) => {
 // Shows individual page with longURL and shortURL as a link to visit the site.
 app.get('/urls/:shortURL', (req, res) => {
   const url = urlDatabase[req.params.shortURL];
-  
+  const userid = req.cookies['user_id']
+
   if (url === undefined) {
     return res.sendStatus(404);
   }
 
   const templateVars = {
-    user_id: req.cookies['user_id'], 
-    email: getEmailFromId(req.cookies['user_id']),
+    user_id: userid, 
+    email: getEmailFromId(userid),
     shortURL: req.params.shortURL,
     longURL: url.longURL
   };
@@ -123,7 +124,13 @@ app.get('/u/:shortURL', (req, res) => {
 // post request to delete a shortURL from users list. Redirects back to URLs page essentially refreshing.
 app.post("/urls/:shortURL/delete", (req, res) => {
   const urlToDelete = req.params.shortURL;
+  const userid = req.cookies['user_id']
   console.log('url to delete', urlToDelete);
+
+  if (urlDatabase[urlToDelete].userID !== userid) {
+    return res.sendStatus(403);
+  }
+
   delete urlDatabase[urlToDelete];
   res.redirect(`/urls/`);
 });
@@ -132,8 +139,12 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 app.post("/urls/:shortURL", (req, res) => {
   const shorturlToUpdate = req.params.shortURL;
   const longURL = req.body.longURL;
-  console.log('req.params', req.params);
-  console.log('req body', req.body);
+  const userid = req.cookies['user_id']
+
+  if (urlDatabase[shorturlToUpdate].userID !== userid) {
+    return res.sendStatus(403);
+  }
+
   urlDatabase[shorturlToUpdate].longURL = longURL;
   res.redirect(`/urls/`);
 });
