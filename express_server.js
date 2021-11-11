@@ -46,27 +46,33 @@ app.get('/Hello', (req, res) => {
 // Shows user URL database.
 app.get('/urls', (req, res) => {
   const templateVars = {
-    username: req.cookies["user_id"],
+    user_id: req.cookies['user_id'], 
+    email: getEmailFromId(req.cookies['user_id']),
     urls: urlDatabase
   };
+
   res.render('urls_index', templateVars);
 });
 
 // Form to enter URL to be shortened.
 app.get('/urls/new', (req, res) => {
   const templateVars = {
-    username: req.cookies["user_id"],
+    user_id: req.cookies['user_id'], 
+    email: getEmailFromId(req.cookies['user_id']),
   };
+
   res.render('urls_new', templateVars);
 });
 
 // Shows individual page with longURL and shortURL as a link to visit the site.
 app.get('/urls/:shortURL', (req, res) => {
   const templateVars = {
-    username: req.cookies["user_id"],
+    user_id: req.cookies['user_id'], 
+    email: getEmailFromId(req.cookies['user_id']),
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL]
   };
+
   res.render('urls_show', templateVars);
 });
 
@@ -109,9 +115,20 @@ app.post("/urls/:shortURL", (req, res) => {
 
 app.get("/register", (req, res) => {
   const templateVars = {
-    username: req.cookies["user_id"],
+    user_id: req.cookies['user_id'], 
+    email: getEmailFromId(req.cookies['user_id']),
   };
+
   res.render('user_register', templateVars);
+});
+
+app.get("/login", (req, res) => {
+  const templateVars = {
+    user_id: req.cookies['user_id'], 
+    email: getEmailFromId(req.cookies['user_id']),
+  };
+
+  res.render('user_login', templateVars);
 });
 
 // creates a user when registration form is submitted
@@ -120,14 +137,16 @@ app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
 
-  if (!email) {
+  if (!email || !password) {
     return res.sendStatus(404);
   }
 
-  if (!userLookup(email)) {
+  const emailExists = userLookup(email);
+  if (emailExists) {
     return res.sendStatus(404);
   }
 
+  
   const shortGen = generateRandomString();
   users[shortGen] = { id: shortGen, email, password };
   res.cookie('user_id', shortGen);
@@ -138,13 +157,26 @@ app.post("/register", (req, res) => {
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  res.cookie('user_email', email);
+
+  if (!email || !password) {
+    return res.sendStatus(404);
+  }
+
+  if (!userLookup(email)) {
+    return res.sendStatus(403)
+  }
+  const id = userLookup(email);
+  
+  if (users[id].password !== password) {
+    return res.sendStatus(403)
+  }
+
+  res.cookie('user_id', id);
   res.redirect('/urls');
 });
 
 app.post("/logout", (req, res) => {
-  const username = req.body.username;
-  res.clearCookie('username', username);
+  res.clearCookie('user_id');
   res.redirect('/urls');
 });
 
@@ -156,9 +188,13 @@ function generateRandomString() {
 const userLookup = function(newEmail) {
   for (const id in users) {
     if (users[id].email === newEmail) {
-      return false;
+      return id;
     }
   }
 
-  return true;
+  return false;
+};
+
+const getEmailFromId = user_id => {
+  return (users[user_id]) ? users[user_id].email : null;
 };
