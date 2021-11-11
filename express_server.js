@@ -9,14 +9,14 @@ const PORT = 8080;
 app.set('view engine', 'ejs');
 
 const urlDatabase = {
-  b6UTxQ: {
-      longURL: "https://www.tsn.ca",
-      userID: "aJ48lW"
-  },
-  i3BoGr: {
-      longURL: "https://www.google.ca",
-      userID: "aJ48lW"
-  }
+    b6UTxQ: {
+        longURL: "https://www.tsn.ca",
+        userID: "aJ48lW"
+    },
+    i3BoGr: {
+        longURL: "https://www.google.ca",
+        userID: "aJ48lW"
+    }
 };
 
 const users = { 
@@ -54,7 +54,7 @@ app.get('/urls', (req, res) => {
   const templateVars = {
     user_id: req.cookies['user_id'], 
     email: getEmailFromId(req.cookies['user_id']),
-    urls: urlDatabase
+    urls: urlDatabase,
   };
 
   res.render('urls_index', templateVars);
@@ -76,11 +76,17 @@ app.get('/urls/new', (req, res) => {
 
 // Shows individual page with longURL and shortURL as a link to visit the site.
 app.get('/urls/:shortURL', (req, res) => {
+  const url = urlDatabase[req.params.shortURL];
+  
+  if (url === undefined) {
+    return res.sendStatus(404);
+  }
+
   const templateVars = {
     user_id: req.cookies['user_id'], 
     email: getEmailFromId(req.cookies['user_id']),
     shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL]
+    longURL: url.longURL
   };
 
   res.render('urls_show', templateVars);
@@ -90,19 +96,25 @@ app.get('/urls/:shortURL', (req, res) => {
 app.post("/urls", (req, res) => {
   console.log(req.body);  // Log the POST request body to the console
   const shortGen = generateRandomString();
-  urlDatabase[shortGen] = req.body.longURL;
+  urlDatabase[shortGen] = { longURL: req.body.longURL, userID: req.cookies['user_id'] };
   res.redirect(`/urls/${shortGen}`);
 });
 
 // redirects shortURL to the longURL website.
 app.get('/u/:shortURL', (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
-
-  if (longURL.includes('http://')) {
-    res.redirect(longURL);
+  const url = urlDatabase[req.params.shortURL];
+  
+  if (url === undefined) {
+    return res.sendStatus(404);
   }
 
-  res.redirect(`http://${longURL}`);
+  let go = url.longURL;
+
+  if (go.includes('http://') || go.includes('https://')) {
+    return res.redirect(go);
+  }
+
+  res.redirect(`http://${go}`);
 });
 
 // post request to delete a shortURL from users list. Redirects back to URLs page essentially refreshing.
@@ -119,7 +131,7 @@ app.post("/urls/:shortURL", (req, res) => {
   const longURL = req.body.longURL;
   console.log('req.params', req.params);
   console.log('req body', req.body);
-  urlDatabase[shorturlToUpdate] = longURL;
+  urlDatabase[shorturlToUpdate].longURL = longURL;
   res.redirect(`/urls/`);
 });
 
