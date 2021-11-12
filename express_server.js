@@ -69,7 +69,8 @@ app.get('/urls/:shortURL', (req, res) => {
   const userid = req.session.id;
 
   if (url === undefined) { // if url doesn't exist in users database, 404.
-    return res.sendStatus(404);
+    res.redirect('/not_found');
+    return;
   }
 
   const templateVars = {
@@ -95,7 +96,8 @@ app.get('/u/:shortURL', (req, res) => {
   const url = urlDatabase[req.params.shortURL];
   
   if (url === undefined) { // if shortURL isn't in database, 404.
-    return res.sendStatus(404);
+    res.redirect('/not_found');
+    return;
   }
 
   let go = url.longURL;
@@ -162,12 +164,14 @@ app.post("/register", (req, res) => {
   const hashPass = bcrypt.hashSync(password, 10);
 
   if (!email || !password) { // if either field is empty, 404.
-    return res.sendStatus(404);
+    res.redirect('/wrong');
+    return;
   }
 
   const emailExists = userLookup(email, users); // if email exists already, 404.
   if (emailExists) {
-    return res.sendStatus(404);
+    res.redirect('/wrong');
+    return;
   }
 
   
@@ -183,17 +187,20 @@ app.post("/login", (req, res) => {
   const password = req.body.password;
   
   if (!email || !password) { // if email or password are missing, 404.
-    return res.sendStatus(404);
+    res.redirect('/wrong_creds');
+    return;
   }
   
   if (!userLookup(email, users)) {  // if email doesn't exists, 403.
-    return res.sendStatus(403);
+    res.redirect('/wrong_creds');
+    return;
   }
 
   const id = userLookup(email, users); // get user id
   
   if (!bcrypt.compareSync(password, users[id].password)) { // if email/password don't match, 403.
-    return res.sendStatus(403);
+    res.redirect('/wrong_creds');
+    return;
   }
 
   req.session.id = id; // login and create encrypted user cookie
@@ -204,4 +211,46 @@ app.post("/login", (req, res) => {
 app.post("/logout", (req, res) => {
   req.session.id = null; // delete users cookies
   res.redirect('/urls');
+});
+
+// 404 page
+app.get("/not_found", (req, res) => {
+  const userid = req.session.id;
+  const userURLs = urlsForUser(userid, urlDatabase);
+
+  const templateVars = {
+    user_id: userid,
+    email: getEmailFromId(userid, users),
+    urls: userURLs,
+  };
+
+  res.render('not_found', templateVars);
+});
+
+// someones already signed up
+app.get("/wrong", (req, res) => {
+  const userid = req.session.id;
+  const userURLs = urlsForUser(userid, urlDatabase);
+
+  const templateVars = {
+    user_id: userid,
+    email: getEmailFromId(userid, users),
+    urls: userURLs,
+  };
+
+  res.render('wrong', templateVars);
+});
+
+// couldn't find that email in our database
+app.get("/wrong_creds", (req, res) => {
+  const userid = req.session.id;
+  const userURLs = urlsForUser(userid, urlDatabase);
+
+  const templateVars = {
+    user_id: userid,
+    email: getEmailFromId(userid, users),
+    urls: userURLs,
+  };
+
+  res.render('wrong_creds', templateVars);
 });
