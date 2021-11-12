@@ -6,9 +6,15 @@ Tinyapp was built with Night Owls in mind and uses a dark mode color theme to ke
 
 ## Final Product
 
-!["screenshot description"](#)
+!["landing page"](https://github.com/Alex-Reyne/tinyapp/blob/master/docs/landing.png?raw=true)
 
-!["screenshot description"](#)
+!["create TinyURL"](https://github.com/Alex-Reyne/tinyapp/blob/master/docs/create.png?raw=true)
+
+!["edit url"](https://github.com/Alex-Reyne/tinyapp/blob/master/docs/edit.png?raw=true)
+
+!["home page"](https://github.com/Alex-Reyne/tinyapp/blob/master/docs/home.png?raw=true)
+
+
 
 ## Dependencies
 
