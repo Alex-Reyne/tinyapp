@@ -116,7 +116,8 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   const userid = req.session.id;
 
   if (urlDatabase[urlToDelete].userID !== userid) { // prevents deletion of URLs by users that don't own them.
-    return res.sendStatus(403);
+    res.redirect('/no_permissions');
+    return;
   }
 
   delete urlDatabase[urlToDelete];
@@ -130,7 +131,8 @@ app.post("/urls/:shortURL", (req, res) => {
   const userid = req.session.id;
 
   if (urlDatabase[shorturlToUpdate].userID !== userid) { // prevents changing of URLs by users that don't own them.
-    return res.sendStatus(403);
+    res.redirect('/no_permissions');
+    return;
   }
 
   urlDatabase[shorturlToUpdate].longURL = longURL;
@@ -253,4 +255,18 @@ app.get("/wrong_creds", (req, res) => {
   };
 
   res.render('wrong_creds', templateVars);
+});
+
+// no permissions to view
+app.get("/no_permissions", (req, res) => {
+  const userid = req.session.id;
+  const userURLs = urlsForUser(userid, urlDatabase);
+
+  const templateVars = {
+    user_id: userid,
+    email: getEmailFromId(userid, users),
+    urls: userURLs,
+  };
+
+  res.render('no_permissions', templateVars);
 });

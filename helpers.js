@@ -32,7 +32,7 @@ const getEmailFromId = (user_id, database) => {
 };
 
 // for creating user id's and shortURLs.
-function generateRandomString() {
+const generateRandomString = () => {
   return Math.floor((1 + Math.random()) * 0x1000000).toString(16).substring(1);
 };
 
