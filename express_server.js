@@ -16,23 +16,36 @@ app.use(bodyParser.urlencoded({extended:true}));
 
 app.set('view engine', 'ejs');
 
+app.listen(PORT, () => {
+  console.log(`Example apps listening on port ${PORT}!`);
+});
+
+
+// DATABASE ------------------------------------------------>
+
 // for storing user urls.
 const urlDatabase = {};
 
 // user database.
 const users = {};
 
-app.get('/', (req, res) => {
-  res.redirect('/urls');
-});
-
-app.listen(PORT, () => {
-  console.log(`Example apps listening on port ${PORT}!`);
-});
-
 // URL database JSON
 app.get('/urls.json', (req, res) => {
   res.json(urlDatabase);
+});
+
+
+// GET REQUESTS TO LOAD USER PAGES ------------------------------>
+
+// Homepage. Redirects visitor to /login page if not signed in or /urls page if they are.
+app.get('/', (req, res) => {
+  console.log(req.session.id);
+
+  if (req.session.id === undefined) {
+    return res.redirect('/login')
+  }
+
+  res.redirect('/urls');
 });
 
 // Shows user specific URLs.
@@ -66,10 +79,16 @@ app.get('/urls/new', (req, res) => {
 // Shows individual page for shortURL with a form to edit the link.
 app.get('/urls/:shortURL', (req, res) => {
   const url = urlDatabase[req.params.shortURL];
+  const checkurl = req.params.shortURL;
   const userid = req.session.id;
 
   if (url === undefined) { // if url doesn't exist in users database, 404.
     res.redirect('/not_found');
+    return;
+  }
+
+  if (urlDatabase[checkurl].userID !== userid) { // prevents accessing of URLs by users that don't own them.
+    res.redirect('/no_permissions');
     return;
   }
 
@@ -81,14 +100,6 @@ app.get('/urls/:shortURL', (req, res) => {
   };
 
   res.render('urls_show', templateVars);
-});
-
-// generates a short URL and adds it to the users database.
-app.post("/urls", (req, res) => {
-  const shortGen = generateRandomString();
-
-  urlDatabase[shortGen] = { longURL: req.body.longURL, userID: req.session.id };
-  res.redirect(`/urls/${shortGen}`);
 });
 
 // redirects shortURL to the longURL website.
@@ -110,41 +121,16 @@ app.get('/u/:shortURL', (req, res) => {
   res.redirect(`http://${go}`);
 });
 
-// post request to delete a shortURL from users list. Redirects back to URLs page essentially refreshing.
-app.post("/urls/:shortURL/delete", (req, res) => {
-  const urlToDelete = req.params.shortURL;
-  const userid = req.session.id;
-
-  if (urlDatabase[urlToDelete].userID !== userid) { // prevents deletion of URLs by users that don't own them.
-    res.redirect('/no_permissions');
-    return;
-  }
-
-  delete urlDatabase[urlToDelete];
-  res.redirect(`/urls/`);
-});
-
-// updates the url for the shortURL page you're on.
-app.post("/urls/:shortURL", (req, res) => {
-  const shorturlToUpdate = req.params.shortURL;
-  const longURL = req.body.longURL;
-  const userid = req.session.id;
-
-  if (urlDatabase[shorturlToUpdate].userID !== userid) { // prevents changing of URLs by users that don't own them.
-    res.redirect('/no_permissions');
-    return;
-  }
-
-  urlDatabase[shorturlToUpdate].longURL = longURL;
-  res.redirect(`/urls/`);
-});
-
 // render the user register page
 app.get("/register", (req, res) => {
   const templateVars = {
     user_id: req.session.id,
     email: getEmailFromId(req.session.id, users),
   };
+
+  if (req.session.id !== undefined) { // redirects user to thier urls page if they are already logged in.
+    return res.redirect('/urls')
+  }
 
   res.render('user_register', templateVars);
 });
@@ -156,64 +142,17 @@ app.get("/login", (req, res) => {
     email: getEmailFromId(req.session.id, users),
   };
 
+  if (req.session.id !== undefined) { // redirects user to thier urls page if they are already logged in.
+    return res.redirect('/urls')
+  }
+
   res.render('user_login', templateVars);
 });
 
-// creates a user when registration form is submitted
-app.post("/register", (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
-  const hashPass = bcrypt.hashSync(password, 10);
+// GET REQUESTS TO LOAD USER PAGES END --------------------------------------/
 
-  if (!email || !password) { // if either field is empty, 404.
-    res.redirect('/wrong');
-    return;
-  }
 
-  const emailExists = userLookup(email, users); // if email exists already, 404.
-  if (emailExists) {
-    res.redirect('/wrong');
-    return;
-  }
-
-  
-  const shortGen = generateRandomString(); // generates a random sting to assign as users.id.
-  users[shortGen] = { id: shortGen, email, password: hashPass }; // creates user object in database.
-  req.session.id = shortGen; // logs in user and creates encrypted cookie to track them.
-  res.redirect('/urls');
-});
-
-// login existing user
-app.post("/login", (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
-  
-  if (!email || !password) { // if email or password are missing, 404.
-    res.redirect('/wrong_creds');
-    return;
-  }
-  
-  if (!userLookup(email, users)) {  // if email doesn't exists, 403.
-    res.redirect('/wrong_creds');
-    return;
-  }
-
-  const id = userLookup(email, users); // get user id
-  
-  if (!bcrypt.compareSync(password, users[id].password)) { // if email/password don't match, 403.
-    res.redirect('/wrong_creds');
-    return;
-  }
-
-  req.session.id = id; // login and create encrypted user cookie
-  res.redirect('/urls');
-});
-
-// logout
-app.post("/logout", (req, res) => {
-  req.session.id = null; // delete users cookies
-  res.redirect('/urls');
-});
+// GET REQUESTS FOR ERROR pages ----------------------------------------- >
 
 // 404 page
 app.get("/not_found", (req, res) => {
@@ -270,3 +209,108 @@ app.get("/no_permissions", (req, res) => {
 
   res.render('no_permissions', templateVars);
 });
+
+// GET REQUESTS FOR ERROR PAGES END --------------------------------------/
+
+
+// POST REQUESTS ---------------------------------------->
+
+// generates a short URL and adds it to the users database.
+app.post("/urls", (req, res) => {
+  const shortGen = generateRandomString();
+  const userid = req.session.id;
+
+  if (!userid) {
+    return res.sendStatus(403); // prevents people from creating new urls using cURL in terminal;
+  }
+
+  urlDatabase[shortGen] = { longURL: req.body.longURL, userID: req.session.id };
+  res.redirect(`/urls/${shortGen}`);
+});
+
+// post request to delete a shortURL from users list. Redirects back to URLs page essentially refreshing.
+app.post("/urls/:shortURL/delete", (req, res) => {
+  const urlToDelete = req.params.shortURL;
+  const userid = req.session.id;
+
+  if (urlDatabase[urlToDelete].userID !== userid) { // prevents deletion of URLs by users that don't own them.
+    res.redirect('/no_permissions');
+    return;
+  }
+
+  delete urlDatabase[urlToDelete];
+  res.redirect(`/urls/`);
+});
+
+// updates the url for the shortURL page you're on.
+app.post("/urls/:shortURL", (req, res) => {
+  const shorturlToUpdate = req.params.shortURL;
+  const longURL = req.body.longURL;
+  const userid = req.session.id;
+
+  if (urlDatabase[shorturlToUpdate].userID !== userid) { // prevents changing of URLs by users that don't own them.
+    res.redirect('/no_permissions');
+    return;
+  }
+
+  urlDatabase[shorturlToUpdate].longURL = longURL;
+  res.redirect(`/urls/`);
+});
+
+// creates a user when registration form is submitted
+app.post("/register", (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
+  const hashPass = bcrypt.hashSync(password, 10);
+
+  if (!email || !password) { // if either field is empty, 404.
+    res.redirect('/wrong');
+    return;
+  }
+
+  const emailExists = userLookup(email, users); // if email exists already, 404.
+  if (emailExists) {
+    res.redirect('/wrong');
+    return;
+  }
+
+  
+  const shortGen = generateRandomString(); // generates a random sting to assign as users.id.
+  users[shortGen] = { id: shortGen, email, password: hashPass }; // creates user object in database.
+  req.session.id = shortGen; // logs in user and creates encrypted cookie to track them.
+  res.redirect('/urls');
+});
+
+// login existing user
+app.post("/login", (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
+  
+  if (!email || !password) { // if email or password are missing, 404.
+    res.redirect('/wrong_creds');
+    return;
+  }
+  
+  if (!userLookup(email, users)) {  // if email doesn't exists, 403.
+    res.redirect('/wrong_creds');
+    return;
+  }
+
+  const id = userLookup(email, users); // get user id
+  
+  if (!bcrypt.compareSync(password, users[id].password)) { // if email/password don't match, 403.
+    res.redirect('/wrong_creds');
+    return;
+  }
+
+  req.session.id = id; // login and create encrypted user cookie
+  res.redirect('/urls');
+});
+
+// logout user and delete all session cookies
+app.post("/logout", (req, res) => {
+  req.session = null; // delete users cookies
+  res.redirect('/urls');
+});
+
+// POST REQUESTS END --------------------------------------/
