@@ -310,7 +310,7 @@ app.post("/login", (req, res) => {
 // logout user and delete all session cookies
 app.post("/logout", (req, res) => {
   req.session = null; // delete users cookies
-  res.redirect('/urls');
+  res.redirect('/login');
 });
 
 // POST REQUESTS END --------------------------------------/
